@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
@@ -45,6 +46,15 @@ export class TeachersService {
       );
     }
 
+    // Check for suspended students
+    const suspendedStudents = students.filter((s) => s.isSuspended);
+    if (suspendedStudents.length > 0) {
+      const suspendedEmails = suspendedStudents.map((s) => s.email).join(', ');
+      throw new InternalServerErrorException(
+        `Cannot register suspended students: ${suspendedEmails}`,
+      );
+    }
+
     for (const student of students) {
       await this.prisma.studentTeacher.upsert({
         where: {
@@ -62,6 +72,7 @@ export class TeachersService {
     }
   }
 
+  // Get common students emails list of provided teachers emails
   async getCommonStudents(teacherEmails: string[]): Promise<string[]> {
     if (teacherEmails.length === 0) {
       throw new BadRequestException('At least one teacher email is required.');
@@ -98,5 +109,19 @@ export class TeachersService {
     return studentLists.reduce((acc, list) =>
       acc.filter((email: string) => list.includes(email)),
     );
+  }
+
+  // Suspend a student
+  async suspendStudent(studentEmail: string): Promise<void> {
+    const student = await this.studentsService.findByEmail(studentEmail);
+    if (!student) {
+      throw new NotFoundException(`Student not found: ${studentEmail}`);
+    }
+
+    if (student.isSuspended) {
+      return;
+    }
+
+    await this.studentsService.suspendStudent(studentEmail);
   }
 }
