@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/database/prisma.service';
 import { StudentsService } from '../students/students.service';
 import { Teacher } from '@prisma/client';
+import { getMentionedEmails } from 'src/utils/common';
 
 @Injectable()
 export class TeachersService {
@@ -123,5 +124,54 @@ export class TeachersService {
     }
 
     await this.studentsService.suspendStudent(studentEmail);
+  }
+
+  // Get notification recipents
+  async retrieveNotificationRecipients(
+    teacherEmail: string,
+    notification: string,
+  ): Promise<string[]> {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { email: teacherEmail },
+      include: {
+        studentLinks: {
+          include: { student: true },
+        },
+      },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found !');
+    }
+
+    const registeredEmails = teacher.studentLinks.map(
+      (link) => link.student.email,
+    );
+
+    // Extract mentioned emails from notification
+    const normalizedNotification = notification.toLowerCase().trim();
+    const mentionedEmails: string[] = getMentionedEmails(
+      normalizedNotification,
+    );
+
+    const allMentionedStudents =
+      await this.studentsService.findByEmails(mentionedEmails);
+    const foundEmails = allMentionedStudents.map((s) => s.email);
+    const missing = mentionedEmails.filter((e) => !foundEmails.includes(e));
+
+    if (missing.length > 0) {
+      throw new NotFoundException(
+        `Mentioned student(s) not found: ${missing.join(', ')}`,
+      );
+    }
+
+    const combined = Array.from(
+      new Set([...registeredEmails, ...mentionedEmails]),
+    );
+
+    const activeStudents =
+      await this.studentsService.findNotSuspendedStudentByEmails(combined);
+
+    return activeStudents.map((s) => s.email);
   }
 }

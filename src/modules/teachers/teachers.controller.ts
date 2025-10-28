@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { RegisterStudentsDto } from './dto/register-students.dto';
+import { RetrieveNotiDto } from './dto/retrieve-noti.dto';
 import { SuspendStudentDto } from './dto/suspend-student.dto';
 import { TeachersService } from './teachers.service';
 
@@ -41,5 +42,27 @@ export class TeachersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async suspendStudent(@Body() dto: SuspendStudentDto): Promise<void> {
     await this.teachersService.suspendStudent(dto.student);
+  }
+
+  @Post('retrievefornotifications')
+  @HttpCode(HttpStatus.OK)
+  async retrieveForNotifications(
+    @Body() dto: RetrieveNotiDto,
+  ): Promise<{ recipients: string[] }> {
+    const { teacher, notification } = dto;
+
+    if (!teacher || !notification) {
+      throw new BadRequestException(
+        'Teacher email and notification text are required.',
+      );
+    }
+
+    const recipients =
+      await this.teachersService.retrieveNotificationRecipients(
+        teacher,
+        notification,
+      );
+
+    return { recipients };
   }
 }
