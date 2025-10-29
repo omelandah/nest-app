@@ -8,6 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { CommonStudentDto } from './dto/common-students.dto';
 import { RegisterStudentsDto } from './dto/register-students.dto';
 import { RetrieveNotiDto } from './dto/retrieve-noti.dto';
 import { SuspendStudentDto } from './dto/suspend-student.dto';
@@ -25,17 +26,8 @@ export class TeachersController {
 
   @Get('commonstudents')
   @HttpCode(HttpStatus.OK)
-  async getCommonStudents(
-    @Query('teacher') teacherEmails: string | string[],
-  ): Promise<string[]> {
-    if (!teacherEmails) {
-      throw new BadRequestException('At least one teacher email is required.');
-    }
-
-    const teacherArray = Array.isArray(teacherEmails)
-      ? teacherEmails
-      : [teacherEmails];
-    return this.teachersService.getCommonStudents(teacherArray);
+  async getCommonStudents(@Query() query: CommonStudentDto): Promise<string[]> {
+    return this.teachersService.getCommonStudents(query.teacher);
   }
 
   @Post('suspend')
