@@ -4,10 +4,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
+import { PrismaService } from '../../database/prisma.service';
 import { StudentsService } from '../students/students.service';
 import { Teacher } from '@prisma/client';
-import { getMentionedEmails } from 'src/utils/common';
+import { getMentionedEmails } from '../../utils/common';
 
 @Injectable()
 export class TeachersService {
